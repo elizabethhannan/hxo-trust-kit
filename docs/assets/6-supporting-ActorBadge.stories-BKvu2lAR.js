@@ -1,4 +1,4 @@
-/* empty css            */import{k as g}from"./govern-GVYuX3F5.js";import"./jsx-runtime-CBDCb4rg.js";import"./index-B-o1Wr-g.js";import"./_commonjsHelpers-Cpj98o6Y.js";const l={title:"Supporting parts/Actor badge",component:g,parameters:{docs:{description:{component:"Figma: Agent/Actor badge"}}}},r={name:"Actor=Agent",args:{actor:"Agent"}},e={name:"Actor=Human",args:{actor:"Human"}},a={name:"Actor=Security",args:{actor:"Security"}};var t,o,n;r.parameters={...r.parameters,docs:{...(t=r.parameters)==null?void 0:t.docs,source:{originalSource:`{
+/* empty css            */import{k as g}from"./govern-DihezcXn.js";import"./jsx-runtime-CBDCb4rg.js";import"./index-B-o1Wr-g.js";import"./_commonjsHelpers-Cpj98o6Y.js";const l={title:"Supporting parts/Actor badge",component:g,parameters:{docs:{description:{component:"Figma: Agent/Actor badge"}}}},r={name:"Actor=Agent",args:{actor:"Agent"}},e={name:"Actor=Human",args:{actor:"Human"}},a={name:"Actor=Security",args:{actor:"Security"}};var t,o,n;r.parameters={...r.parameters,docs:{...(t=r.parameters)==null?void 0:t.docs,source:{originalSource:`{
   name: "Actor=Agent",
   args: {
     "actor": "Agent"

@@ -7,6 +7,8 @@ import { ConfidenceChip, type ConfidenceLevel } from './explain';
 /* ---------- Act/Preview-then-apply ---------- */
 export type PreviewState = 'Countdown' | 'Applied' | 'Cancelled';
 export interface PreviewThenApplyProps {
+  /** Move focus to Cancel when the preview appears. Default true; set false when several components share a screen. */
+  takeFocus?: boolean;
   state?: PreviewState;
   motion?: 'On' | 'Off';
   agent?: string;
@@ -27,7 +29,7 @@ export interface PreviewThenApplyProps {
 export function PreviewThenApply({
   state = 'Countdown', motion, agent = 'Layout agent',
   preview = 'Placing a floor lamp left of the grey sofa', applied = 'Floor lamp placed left of the grey sofa',
-  appliedAt = '09:21:07', cancelledAt = '09:21:06', countdownText, live = false, durationMs = 1600,
+  appliedAt = '09:21:07', cancelledAt = '09:21:06', countdownText, live = false, durationMs = 1600, takeFocus = true,
   onApply, onCancel, onUndo, onEvent,
 }: PreviewThenApplyProps) {
   const m = useMotion(motion);
@@ -39,7 +41,7 @@ export function PreviewThenApply({
   const cancel = () => { setS('Cancelled'); emit(onEvent, 'preview_cancelled', 'Act/Preview-then-apply', { agent, action: 'cancelled', actor: 'person', ms_before_cancel: Date.now() - shownAt.current }); onCancel?.(); };
   useEffect(() => {
     if (s !== 'Countdown') return;
-    cancelRef.current?.focus({ preventScroll: true });
+    if (takeFocus) cancelRef.current?.focus({ preventScroll: true });
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); cancel(); } };
     window.addEventListener('keydown', k, true);
     const timer = live ? window.setTimeout(() => { setS('Applied'); onApply?.(); }, durationMs) : undefined;
@@ -75,6 +77,8 @@ export function PreviewThenApply({
 
 /* ---------- Act/Approval card ---------- */
 export interface ApprovalCardProps {
+  /** Move focus to the title when the card appears. Default true; set false when several components share a screen. */
+  takeFocus?: boolean;
   kind?: 'Standard' | 'Destructive';
   state?: 'Waiting' | 'Approved' | 'Declined';
   agent?: string;
@@ -100,7 +104,7 @@ export function ApprovalCard(p: ApprovalCardProps) {
   const by = p.decidedBy ?? 'K. Patel';
   const titleId = useId();
   const titleRef = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { if (state === 'Waiting') titleRef.current?.focus({ preventScroll: true }); }, [state]);
+  useEffect(() => { if (state === 'Waiting' && p.takeFocus !== false) titleRef.current?.focus({ preventScroll: true }); }, [state]);
   useEmitOnce(p.onEvent, state === 'Waiting', 'approval_requested', 'Act/Approval card', { agent, action: 'requested', actor: 'agent', kind });
   const decide = (action: 'approved' | 'declined') => {
     emit(p.onEvent, 'decision_made', 'Act/Approval card', { agent, action, actor: 'person', kind, reason: action === 'declined' ? p.reason : undefined });

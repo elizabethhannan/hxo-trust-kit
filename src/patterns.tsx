@@ -43,7 +43,7 @@ export function ClaimsCoderReview({ onEvent }: { onEvent?: OnHxoEvent }) {
         </section>
         <section aria-label="Decisions" style={col(480)}>
           <HandBackCard onEvent={onEvent} />
-          <ApprovalCard onEvent={onEvent} />
+          <ApprovalCard takeFocus={false} onEvent={onEvent} />
         </section>
       </main>
     </div>
@@ -89,7 +89,7 @@ export function TeamChatHandBack({ onEvent }: { onEvent?: OnHxoEvent }) {
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           {msg('Maya Chen', '2:58 PM', false, '@Launch agent can you get the Q4 pricing update out today? Page, release notes and the customer email.')}
           {msg('Launch agent', '3:01 PM', true, 'On it. Page and notes are reversible, so I’ll preview each one here before it goes live. The customer email waits for a person.', <>
-            <PreviewThenApply agent="Launch agent" preview="Posting the release notes to the help center" countdownText="Posts in 0.6 s · Esc to cancel" onEvent={onEvent} />
+            <PreviewThenApply takeFocus={false} agent="Launch agent" preview="Posting the release notes to the help center" countdownText="Posts in 0.6 s · Esc to cancel" onEvent={onEvent} />
             <UndoBar title="Release notes posted" detail="Undo stays open until the customer email is sent" agent="Launch agent" onEvent={onEvent} />
           </>)}
           {msg('Launch agent', '3:12 PM', true, 'I’ve paused before the customer email. One decision is yours.',
