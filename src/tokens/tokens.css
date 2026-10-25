@@ -1,0 +1,217 @@
+/* Generated from the Figma library "HXO Trust and Control Kit" (file Cb0QDEILY9cggEp101ZTg0).
+   Names are each variable's WEB code syntax. Do not edit by hand; re-export from Figma. */
+
+:root {
+  /* Primitives (hidden in Figma; semantic tokens below are what components use) */
+  --prim-navy-950: #0f1419;
+  --prim-navy-900: #12233f;
+  --prim-navy-700: #1f4f9a;
+  --prim-navy-300: #7fb0f5;
+  --prim-navy-100: #e1eaf7;
+  --prim-navy-900-dark: #1b2a40;
+  --prim-slate-900: #121a24;
+  --prim-slate-875: #1f2a35;
+  --prim-slate-850: #172029;
+  --prim-slate-800: #2b3843;
+  --prim-slate-700: #44515c;
+  --prim-slate-600: #5f6c76;
+  --prim-slate-400: #94a1ad;
+  --prim-slate-300: #b7c2cb;
+  --prim-slate-200: #d3dbe0;
+  --prim-slate-100: #e9edf2;
+  --prim-slate-50: #f2f4f6;
+  --prim-slate-25: #eef2f5;
+  --prim-white: #ffffff;
+  --prim-purple-600: #5b47b8;
+  --prim-purple-300: #a797ff;
+  --prim-purple-100: #eeebfb;
+  --prim-purple-950: #241f3f;
+  --prim-red-700: #b42a22;
+  --prim-red-300: #f08a80;
+  --prim-red-100: #fbe9e7;
+  --prim-red-950: #3a1714;
+  --prim-green-700: #1c7a43;
+  --prim-green-300: #6fd39a;
+  --prim-green-100: #e3f3ea;
+  --prim-green-950: #12301f;
+  --prim-orange-700: #a64b12;
+  --prim-orange-300: #f2a66b;
+  --prim-orange-100: #fbede2;
+  --prim-orange-950: #3a2212;
+  --prim-teal-700: #1f7a78;
+  --prim-teal-300: #7fd1c7;
+  --prim-teal-100: #e0f2ef;
+  --prim-teal-950: #10302e;
+  --prim-blue-600: #2a78d6;
+  --prim-blue-300: #6aa8f0;
+
+  /* Color: Light mode */
+  --bg: #f2f4f6; /* color/bg/canvas */
+  --surface: #ffffff; /* color/bg/surface */
+  --muted: #e9edf2; /* color/bg/muted */
+  --inverse: #12233f; /* color/bg/inverse */
+  --accent: #1f4f9a; /* color/bg/accent */
+  --accent-soft: #e1eaf7; /* color/bg/accent-soft */
+  --ai: #5b47b8; /* color/bg/agent */
+  --ai-soft: #eeebfb; /* color/bg/agent-soft */
+  --crit: #b42a22; /* color/bg/critical */
+  --crit-soft: #fbe9e7; /* color/bg/critical-soft */
+  --good: #1c7a43; /* color/bg/success */
+  --good-soft: #e3f3ea; /* color/bg/success-soft */
+  --warn: #a64b12; /* color/bg/warning */
+  --warn-soft: #fbede2; /* color/bg/warning-soft */
+  --brand: #1f7a78; /* color/bg/brand */
+  --brand-soft: #e0f2ef; /* color/bg/brand-soft */
+  --ink: #121a24; /* color/text/primary */
+  --ink-2: #44515c; /* color/text/secondary */
+  --ink-3: #5f6c76; /* color/text/tertiary */
+  --ink-inverse: #ffffff; /* color/text/inverse */
+  --accent-ink: #1f4f9a; /* color/text/accent */
+  --ai-ink: #5b47b8; /* color/text/agent */
+  --crit-ink: #b42a22; /* color/text/critical */
+  --good-ink: #1c7a43; /* color/text/success */
+  --warn-ink: #a64b12; /* color/text/warning */
+  --brand-ink: #1f7a78; /* color/text/brand */
+  --line: #d3dbe0; /* color/border/default */
+  --line-strong: #94a1ad; /* color/border/strong */
+  --ai-line: #5b47b8; /* color/border/agent */
+  --crit-line: #b42a22; /* color/border/critical */
+  --good-line: #1c7a43; /* color/border/success */
+  --warn-line: #a64b12; /* color/border/warning */
+  --focus: #2a78d6; /* color/border/focus */
+  --icon: #44515c; /* color/icon/default */
+  --icon-ai: #5b47b8; /* color/icon/agent */
+
+  /* Dimension and Motion */
+  --space-2xs: 2px; /* space/2xs */
+  --space-xs: 4px; /* space/xs */
+  --space-sm: 8px; /* space/sm */
+  --space-md: 12px; /* space/md */
+  --space-lg: 16px; /* space/lg */
+  --space-xl: 24px; /* space/xl */
+  --space-2xl: 32px; /* space/2xl */
+  --space-3xl: 48px; /* space/3xl */
+  --radius-sm: 4px; /* radius/sm */
+  --radius-md: 8px; /* radius/md */
+  --radius-lg: 12px; /* radius/lg */
+  --radius-xl: 16px; /* radius/xl */
+  --radius-full: 999px; /* radius/full */
+  --stroke-default: 1px; /* stroke/default */
+  --stroke-emphasis: 4px; /* stroke/emphasis */
+  --size-target-min: 44px; /* size/target-min */
+  --size-phone-frame: 320px; /* size/phone-frame */
+  --duration-instant: 0ms; /* duration/instant */
+  --duration-quick: 150ms; /* duration/quick */
+  --duration-standard: 250ms; /* duration/standard */
+  --duration-preview: 1600ms; /* duration/preview */
+  --duration-undo-window: 10000ms; /* duration/undo-window */
+
+  /* Text styles */
+  --font-display: 'Familjen Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  /* Effect styles */
+  --shadow-card: 0 1px 3px 0 rgba(18, 26, 36, 0.06), 0 4px 12px -2px rgba(18, 26, 36, 0.08);
+  --shadow-raised: 0 12px 28px -6px rgba(18, 26, 36, 0.14);
+  --focus-ring: 0 0 0 3px var(--focus);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1419;
+    --surface: #172029;
+    --muted: #1f2a35;
+    --inverse: #eef2f5;
+    --accent: #7fb0f5;
+    --accent-soft: #1b2a40;
+    --ai: #a797ff;
+    --ai-soft: #241f3f;
+    --crit: #f08a80;
+    --crit-soft: #3a1714;
+    --good: #6fd39a;
+    --good-soft: #12301f;
+    --warn: #f2a66b;
+    --warn-soft: #3a2212;
+    --brand: #7fd1c7;
+    --brand-soft: #10302e;
+    --ink: #eef2f5;
+    --ink-2: #b7c2cb;
+    --ink-3: #94a1ad;
+    --ink-inverse: #0f1419;
+    --accent-ink: #7fb0f5;
+    --ai-ink: #a797ff;
+    --crit-ink: #f08a80;
+    --good-ink: #6fd39a;
+    --warn-ink: #f2a66b;
+    --brand-ink: #7fd1c7;
+    --line: #2b3843;
+    --line-strong: #5f6c76;
+    --ai-line: #a797ff;
+    --crit-line: #f08a80;
+    --good-line: #6fd39a;
+    --warn-line: #f2a66b;
+    --focus: #6aa8f0;
+    --icon: #b7c2cb;
+    --icon-ai: #a797ff;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"], [data-theme="dark"] {
+  --bg: #0f1419;
+  --surface: #172029;
+  --muted: #1f2a35;
+  --inverse: #eef2f5;
+  --accent: #7fb0f5;
+  --accent-soft: #1b2a40;
+  --ai: #a797ff;
+  --ai-soft: #241f3f;
+  --crit: #f08a80;
+  --crit-soft: #3a1714;
+  --good: #6fd39a;
+  --good-soft: #12301f;
+  --warn: #f2a66b;
+  --warn-soft: #3a2212;
+  --brand: #7fd1c7;
+  --brand-soft: #10302e;
+  --ink: #eef2f5;
+  --ink-2: #b7c2cb;
+  --ink-3: #94a1ad;
+  --ink-inverse: #0f1419;
+  --accent-ink: #7fb0f5;
+  --ai-ink: #a797ff;
+  --crit-ink: #f08a80;
+  --good-ink: #6fd39a;
+  --warn-ink: #f2a66b;
+  --brand-ink: #7fd1c7;
+  --line: #2b3843;
+  --line-strong: #5f6c76;
+  --ai-line: #a797ff;
+  --crit-line: #f08a80;
+  --good-line: #6fd39a;
+  --warn-line: #f2a66b;
+  --focus: #6aa8f0;
+  --icon: #b7c2cb;
+  --icon-ai: #a797ff;
+  color-scheme: dark;
+}
+
+/* Text style classes (Figma text styles, same names) */
+.hxo-text-display-l { font: 600 40px/48px var(--font-display); letter-spacing: -0.5px; }
+.hxo-text-h1 { font: 600 28px/34px var(--font-display); letter-spacing: -0.3px; }
+.hxo-text-h2 { font: 600 22px/28px var(--font-display); }
+.hxo-text-h3 { font: 600 18px/24px var(--font-display); }
+.hxo-text-body-m { font: 400 16px/24px var(--font-body); }
+.hxo-text-body-m-strong { font: 600 16px/24px var(--font-body); }
+.hxo-text-body-s { font: 400 14px/20px var(--font-body); }
+.hxo-text-label-m { font: 500 13px/18px var(--font-body); letter-spacing: 0.1px; }
+.hxo-text-eyebrow { font: 700 12px/16px var(--font-body); letter-spacing: 1.2px; text-transform: uppercase; }
+.hxo-text-data-s { font: 400 12px/16px var(--font-data); }
+.hxo-text-data-m { font: 500 14px/20px var(--font-data); }
+
+/* Effect style classes */
+.hxo-shadow-card { box-shadow: var(--shadow-card); }
+.hxo-shadow-raised { box-shadow: var(--shadow-raised); }
+.hxo-focus-ring { box-shadow: var(--focus-ring); }
