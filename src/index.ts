@@ -9,3 +9,5 @@ export * from './components/act';
 export * from './components/control';
 export * from './components/handback';
 export * from './components/govern';
+export * from './components/scorecard';
+export * from './run';

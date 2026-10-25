@@ -241,12 +241,38 @@ A summary of every component in this kit, for people and coding agents working i
 - `onApprove?: (outcome: string) => void`
 - `onEvent?: OnHxoEvent`
 
+## scorecard.tsx
+
+### RunScorecard
+
+Human-in-the-loop audit review after a test run of an agent team. Scores the run from its telemetry events only.
+
+- `run?: 'Paused mid-run' | 'Clean run' | 'Drifting'` (seeded test runs; ignored when `events` or `score` is given)
+- `view?: 'Card' | 'Report'`
+- `review?: 'Awaiting sign-off' | 'Signed off'`
+- `events?: HxoEvent[]` (score a real run) or `score?: RunScore` (from `scoreRun`)
+- `team?: string`, `summary?: string`, `reviewer?: string`, `signedAt?: string`
+- `onSignOff?: (r: { verdict; decision: 'signed_off' | 'blocked'; note }) => void`
+- `onSendToEvaluation?: (agent: string) => void`, `onRerun?: () => void`, `onEvent?: OnHxoEvent`
+
+Internal score (how the agents worked together, weights): steps right the first time 40, hand-offs with all 7 Handoff Contract strands 20, mistakes caught before the claim went out 20, steps with no retry 20.
+HXO experience score (what the person waiting on a result lived through): got the right result 30, resolved within 15 minutes 15, no avoidable work for the person 20, pauses honored 15, hand-backs with full context 20. A measure with no data is shown as Not tested and its weight is shared out.
+Verdict: Not successful if any claim would go out wrong, any is still open, HXO < 70 or right results < 90%. Successful if internal ≥ 85, HXO ≥ 85 and avoidable person work (fixes, repeat questions, pauses) ≤ 10% of claims. Otherwise Successful with interventions. Agents are ranked by steps right the first time.
+
+## run.ts
+
+- `simulateRun(scenario, { pauses?, world?, person? })`: seeded test of the Claims Coder agent team (7 agents, 24 synthetic claims). Every random draw happens up front, so a pause added later never changes what happened before it.
+- `scoreRun(events)`: the scoring above, from events alone. Works on any product that emits these events.
+- `TEAM`, `STRANDS`, `HANDBACK_PARTS`, `clock(seconds)`.
+
 ## Telemetry
 
 `onEvent(e: HxoEvent)` receives `{ event, t, component, agent?, action, actor, ...extra }`. Event names:
 
 `understood_shown`, `clarify_asked`, `confidence_viewed`, `evidence_opened`, `trace_opened`, `preview_shown`, `preview_cancelled`, `approval_requested`, `decision_made`, `correction_made`, `undo`, `stop`, `agent_paused`, `switch_decision`, `handback_shown`, `handback_resolved`, `escalation_shown`, `agent_disagreement`, `audit_flagged`, `audit_reviewed`, `evaluation_decided`, `frustration_viewed`, `theme_opened`
 
+Run events (added for the Run scorecard): `run_started`, `agent_step` (action `ok` | `retry` | `held`; `claim`, `start_s`, `dur_s`), `agent_handoff` (agent `[from, to]`; `strands`, `dropped`), `claim_resolved` (action `correct` | `corrected` | `wrong`; `secs`, `missed_from`), `run_completed`, `run_reviewed` (action `signed_off` | `blocked` | `sent_to_evaluation`). Simulated events also carry `s_offset`, seconds from the run start. A person's pause is `agent_paused` with actor `person`; the agent's confirmation is `agent_paused` with actor `agent`, action `idle` and `ack_secs`.
+
 ## Patterns
 
-`src/patterns.tsx`: `ClaimsCoderReview` and `TeamChatHandBack`, composed only from kit components. They mirror the Figma Patterns page.
+`src/patterns.tsx`: `ClaimsCoderReview` and `TeamChatHandBack`, composed only from kit components. They mirror the Figma Patterns page. `AgentTeamTestRun` plays a test run at 120×; its Pause control is live, and the run ends in the Run scorecard (Report view) scored from the events it emitted. It has no Figma frame yet.

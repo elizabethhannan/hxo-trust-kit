@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ClaimsCoderReview, TeamChatHandBack } from '../patterns';
+import { AgentTeamTestRun, ClaimsCoderReview, TeamChatHandBack } from '../patterns';
 
 const meta = {
   title: 'Patterns',
@@ -10,3 +10,4 @@ type Story = StoryObj<typeof meta>;
 
 export const ClaimsCoderReviewStory: Story = { name: 'Claims Coder review', render: () => <div style={{ padding: 32, background: 'var(--bg)' }}><ClaimsCoderReview /></div> };
 export const TeamChatHandBackStory: Story = { name: 'Team-chat hand-back', render: () => <div style={{ padding: 32, background: 'var(--bg)' }}><TeamChatHandBack /></div> };
+export const AgentTeamTestRunStory: Story = { name: 'Agent team test run', render: () => <div style={{ padding: 32, background: 'var(--bg)', minHeight: '100vh' }}><AgentTeamTestRun /></div> };

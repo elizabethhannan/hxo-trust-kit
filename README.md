@@ -16,9 +16,9 @@ Stories are grouped the same way as the Figma pages.
 | 2 · Preview before acting | Preview-then-apply, Approval card, Correction with reason |
 | 3 · Humans hold the switch | Undo bar, Stop control, Pause one agent, Switch decision |
 | 4 · Hand back with context | Hand-back card, Escalation banner, Agent disagreement banner |
-| 5–7 · Learn and govern | Human Frustration Matrix, Agent Auditor, Evaluation Matrix |
+| 5–7 · Learn and govern | Human Frustration Matrix, Agent Auditor, Evaluation Matrix, Run scorecard |
 | Supporting parts | Button, Actor badge, Status pill |
-| Patterns | Claims Coder review, Team-chat hand-back |
+| Patterns | Claims Coder review, Team-chat hand-back, Agent team test run |
 
 ## What is built in
 
@@ -28,6 +28,15 @@ Stories are grouped the same way as the Figma pages.
 - **Keyboard.** Esc cancels a preview first; otherwise Esc stops all agents. Number keys pick an option on the Understood card.
 - **Motion.** Every animated component takes `motion="On" | "Off"` and also turns motion off under `prefers-reduced-motion`.
 - **Telemetry.** Each component takes `onEvent` and emits one envelope, `{ event, t, component, agent, action, actor, ... }`, using the event names from the Telemetry spec page in Figma.
+
+## Run scorecard
+
+After a test run of an agent team, the **Run scorecard** is the human-in-the-loop audit review. It scores the run from its telemetry events alone, on two sides:
+
+- **Internal, how the agents worked together:** steps right the first time, hand-offs that carried all seven Handoff Contract strands, mistakes caught before a result went out, steps with no retry. Agents are ranked.
+- **External, the HXO experience for the person waiting on a result:** got the right result, how fast, avoidable work for the person, whether pauses were honored, and whether hand-backs carried full context.
+
+It then says whether the run was successful, what was hard, what held up, and asks a person to sign off or block the release. `src/run.ts` holds the seeded test harness (Claims Coder team, 24 synthetic claims) and `scoreRun()`, which works on any product that emits these events. All runs shown are simulated.
 
 ## Run it
 

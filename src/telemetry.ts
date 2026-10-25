@@ -27,7 +27,13 @@ export type HxoEventName =
   | 'audit_reviewed'
   | 'evaluation_decided'
   | 'frustration_viewed'
-  | 'theme_opened';
+  | 'theme_opened'
+  | 'run_started'
+  | 'agent_step'
+  | 'agent_handoff'
+  | 'claim_resolved'
+  | 'run_completed'
+  | 'run_reviewed';
 
 export interface HxoEvent {
   /** Event name from the Telemetry spec. */

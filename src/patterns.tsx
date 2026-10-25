@@ -1,9 +1,10 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
-  AgentDisagreementBanner, AgentTraceRow, ApprovalCard, EvidenceLink, HandBackCard, PauseOneAgent,
-  PreviewThenApply, StopControl, UndoBar,
+  AgentDisagreementBanner, AgentTraceRow, ApprovalCard, Button, EscalationBanner, EvidenceLink, HandBackCard, PauseOneAgent,
+  PreviewThenApply, RunScorecard, StatusPill, StopControl, UndoBar,
 } from './index';
-import type { OnHxoEvent } from './telemetry';
+import { TEAM, clock, scoreRun, simulateRun, type Pause } from './run';
+import type { HxoEvent, OnHxoEvent } from './telemetry';
 
 const col = (w: number, gap = 16): CSSProperties => ({ width: w, display: 'flex', flexDirection: 'column', gap, flex: 'none' });
 const label: CSSProperties = { font: '700 12px/16px var(--font-body)', color: 'var(--ink-3)', margin: 0 };
@@ -116,6 +117,124 @@ export function TeamChatHandBack({ onEvent }: { onEvent?: OnHxoEvent }) {
         <PauseOneAgent agent="Launch agent" runningLabel="Waiting for you · 1 task held" onEvent={onEvent} />
         <StopControl headline="3 agents working in this workspace" working={3} security={1} onEvent={onEvent} />
       </aside>
+    </div>
+  );
+}
+
+
+/* ---------------------------------------------------------------- Agent team test run */
+
+const SPEED = 120; // simulated seconds per real second
+const offset = (e: HxoEvent) => Number(e.s_offset ?? 0);
+const who = (e: HxoEvent) => (Array.isArray(e.agent) ? e.agent.join(' → ') : e.agent ?? '');
+
+function describe(e: HxoEvent): string | null {
+  switch (e.event) {
+    case 'run_started': return 'Test run started: 24 synthetic claims, 7 agents.';
+    case 'escalation_shown': return `Emergency agent moved claim ${e.claim} to the front and alerted a person.`;
+    case 'handback_shown': return `${who(e)} handed claim ${e.claim} back: below its confidence bar.`;
+    case 'handback_resolved': return `${e.by} answered ${who(e)} on claim ${e.claim}.`;
+    case 'audit_flagged': return e.action === 'flagged' ? `Agent Auditor flagged ${who(e)}: low-confidence codes since the new invoice format.` : `Agent Auditor held claim ${e.claim} for review (${who(e)}).`;
+    case 'correction_made': return `${e.by} fixed a ${who(e)} mistake on claim ${e.claim} (caught by ${e.caught_by}).`;
+    case 'clarify_asked': return `${who(e)} asked the person again on claim ${e.claim}: ${e.why}.`;
+    case 'agent_paused': return e.actor === 'person' ? `${e.by ?? 'You'} ${e.action} ${who(e)}.` : `${who(e)} finished its current step and is idle.`;
+    case 'claim_resolved': return e.action === 'wrong' ? `Claim ${e.claim} went out with a mistake.` : e.action === 'corrected' ? `Claim ${e.claim} resolved after a fix.` : null;
+    case 'run_completed': return 'All claims resolved. Scoring the run.';
+    default: return null;
+  }
+}
+
+/**
+ * Pattern: Agent team test run. A seeded test of the Claims Coder agent team plays back at 120×.
+ * The Pause control is live: pausing the Code matcher and resuming it changes the rest of the run
+ * (the person adds the new invoice rule while it is paused). When the run ends, the Run scorecard
+ * scores it from the events the run emitted, including the person's own pause.
+ */
+export function AgentTeamTestRun({ onEvent, autoStart = false }: { onEvent?: OnHxoEvent; autoStart?: boolean }) {
+  const [phase, setPhase] = useState<'idle' | 'running' | 'done'>(autoStart ? 'running' : 'idle');
+  const [now, setNow] = useState(0);
+  const [pauses, setPauses] = useState<Pause[]>([]);
+  const nowRef = useRef(0);
+  nowRef.current = now;
+  const events = useMemo(() => simulateRun('Paused mid-run', { pauses, person: 'You' }), [pauses]);
+  const lastT = events.length ? offset(events[events.length - 1]) : 0;
+  const completed = events.some(e => e.event === 'run_completed');
+  const visible = events.filter(e => offset(e) <= now);
+  const paused = pauses.find(p => p.agent === 'Code matcher' && !isFinite(p.to));
+
+  useEffect(() => {
+    if (phase !== 'running') return;
+    let last = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const next = nowRef.current + ((t - last) / 1000) * SPEED;
+      last = t;
+      setNow(next);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+  useEffect(() => { if (phase === 'running' && completed && now >= lastT) setPhase('done'); }, [phase, completed, now, lastT]);
+
+  const togglePause = (isPaused: boolean) => {
+    const t = Math.round(nowRef.current);
+    setPauses(ps => (isPaused
+      ? [...ps, { agent: 'Code matcher', from: t, to: Infinity, by: 'You' }]
+      : ps.map(p => (p.agent === 'Code matcher' && !isFinite(p.to) ? { ...p, to: Math.max(t, p.from + 1) } : p))));
+  };
+  const restart = () => { setPauses([]); setNow(0); setPhase('running'); };
+  const status = (agent: string) => {
+    if (agent === 'Code matcher' && paused && now >= paused.from) return { tone: 'Warning' as const, label: 'Paused' };
+    const busy = events.find(e => e.event === 'agent_step' && who(e) === agent && Number(e.start_s) <= now && offset(e) > now);
+    if (busy) return { tone: 'Agent' as const, label: `Claim ${busy.claim}` };
+    const done = visible.filter(e => e.event === 'agent_step' && who(e) === agent).length;
+    return { tone: 'Neutral' as const, label: done ? `Idle · ${done} done` : 'Waiting' };
+  };
+  const resolved = visible.filter(e => e.event === 'claim_resolved').length;
+  const flagged = visible.find(e => e.event === 'audit_flagged' && e.action === 'flagged');
+  const feed = visible.map(e => ({ e, text: describe(e) })).filter(x => x.text).slice(-8).reverse();
+  const score = useMemo(() => (phase === 'done' ? scoreRun(events) : null), [phase, events]);
+
+  return (
+    <div className="hxo" style={{ display: 'flex', flexDirection: 'column', gap: 24, width: 1200, maxWidth: '100%' }}>
+      <header className="hxo-row hxo-row--between">
+        <div className="hxo-stack">
+          <h1 className="hxo-h2">Agent team test run</h1>
+          <p className="hxo-small">Claims Coder · 7 agents · 24 synthetic claims · a new invoice format arrives at claim 9 · plays at 120× · simulated</p>
+        </div>
+        <div className="hxo-actions">
+          <StatusPill tone={phase === 'done' ? 'Success' : phase === 'running' ? 'Agent' : 'Neutral'} label={phase === 'done' ? `Done · ${clock(lastT)}` : phase === 'running' ? `Running · ${clock(now)}` : 'Ready'} />
+          {phase === 'idle' && <Button variant="Primary" onClick={() => setPhase('running')}>Start test run</Button>}
+          {phase === 'running' && !paused && <Button variant="Secondary" onClick={() => setNow(lastT)}>Skip to the end</Button>}
+          {phase === 'done' && <Button variant="Secondary" onClick={restart}>Run again</Button>}
+        </div>
+      </header>
+      {phase !== 'done' || !score ? (
+        <div className="hxo-live">
+          <section className="hxo-stack" style={{ gap: 12 }} aria-label="Agent team">
+            <p className="hxo-eyebrow">The team</p>
+            <ul className="hxo-live__team">
+              {TEAM.map(a => { const st = status(a.name); return <li key={a.name}><span className="hxo-label">{a.name}</span><StatusPill tone={st.tone} label={st.label} /></li>; })}
+            </ul>
+            <PauseOneAgent agent="Code matcher" pausedBy="You" state={paused ? 'Paused' : pauses.length ? 'Resumed' : 'Running'} at={paused ? clock(paused.from) : pauses.length ? clock(pauses[pauses.length - 1].to) : undefined} runningLabel={phase === 'running' ? 'Running · new invoice format ahead' : 'Ready'} onToggle={togglePause} onEvent={onEvent} />
+            {paused && <p className="hxo-small">While it is paused, you add the new invoice rule. Resume it to let the run finish.</p>}
+          </section>
+          <section className="hxo-stack" style={{ gap: 12 }} aria-label="Run progress">
+            <p className="hxo-eyebrow">Claims resolved: {resolved} of 24</p>
+            <div className="hxo-meter" style={{ background: 'var(--muted)' }} role="progressbar" aria-valuemin={0} aria-valuemax={24} aria-valuenow={resolved} aria-label="Claims resolved"><i style={{ width: `${(resolved / 24) * 100}%`, background: 'var(--ai)' }} /></div>
+            {flagged && !paused && !pauses.length && (
+              <EscalationBanner level="Warning" title="The Agent Auditor flagged the Code matcher" detail="Low-confidence codes since the new invoice format. Pause it to add the rule; other agents keep working." clock={clock(offset(flagged))} actionLabel="Pause Code matcher" agent="Agent Auditor" onAction={() => togglePause(true)} onEvent={onEvent} />
+            )}
+            <p className="hxo-eyebrow">What just happened</p>
+            <ol className="hxo-feed" aria-live="polite">
+              {feed.length ? feed.map(({ e, text }, i) => <li key={`${e.event}-${offset(e)}-${i}`}><time>{clock(offset(e))}</time>{text}</li>) : <li>Press Start test run. Watch for the Auditor’s flag, then decide whether to pause the Code matcher.</li>}
+            </ol>
+          </section>
+        </div>
+      ) : (
+        <RunScorecard view="Report" score={score} summary={`Live test run · 24 synthetic claims · ${pauses.length ? `you paused the Code matcher ${clock(pauses[0].from)}–${clock(pauses[0].to)}` : 'no one paused the Code matcher'}`} reviewer="You" onRerun={restart} onEvent={onEvent} />
+      )}
     </div>
   );
 }
