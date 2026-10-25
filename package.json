@@ -8,7 +8,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static",
     "typecheck": "tsc --noEmit",
-    "test:stories": "node scripts/verify-stories.mjs"
+    "test:stories": "node scripts/verify-stories.mjs",
+    "build-pages": "storybook build -o docs && touch docs/.nojekyll"
   },
   "dependencies": {
     "react": "18.3.1",

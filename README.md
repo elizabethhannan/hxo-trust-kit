@@ -56,6 +56,10 @@ import { HandBackCard } from './src';
 
 See `AGENTS.md` for the full component API.
 
+## Live Storybook
+
+The built Storybook lives in `docs/` and is served by GitHub Pages (Settings > Pages > main > /docs). Rebuild it with `npm run build-pages`.
+
 ## Rights and security
 
 - **No license.** © 2026 Elizabeth Hannan. All rights reserved. No license is granted to copy, modify, distribute or reuse this work, in whole or in part.
