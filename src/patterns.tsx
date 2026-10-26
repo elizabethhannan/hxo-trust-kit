@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   AgentDisagreementBanner, AgentTraceRow, ApprovalCard, Button, EscalationBanner, EvidenceLink, HandBackCard, PauseOneAgent,
-  PreviewThenApply, RunScorecard, StatusPill, StopControl, UndoBar,
+  PreviewThenApply, RunScorecard, StatusPill, StopControl, TaskTimers, UndoBar,
 } from './index';
-import { TEAM, clock, scoreRun, simulateRun, type Pause } from './run';
+import { clock, scoreRun, simulateRun, timeRun, type CodeMatcherVersion, type Pause, type RunTiming } from './run';
 import type { HxoEvent, OnHxoEvent } from './telemetry';
 
 const col = (w: number, gap = 16): CSSProperties => ({ width: w, display: 'flex', flexDirection: 'column', gap, flex: 'none' });
@@ -124,7 +124,13 @@ export function TeamChatHandBack({ onEvent }: { onEvent?: OnHxoEvent }) {
 
 /* ---------------------------------------------------------------- Agent team test run */
 
-const SPEED = 120; // simulated seconds per real second
+/** Playback speed: simulated seconds per real second. Task timers count simulated time, so speed never changes them. */
+export const PLAYBACK = { Slow: 60, Medium: 120, Fast: 300 } as const;
+export type Playback = keyof typeof PLAYBACK;
+const STORE = 'hxo-trust-kit:last-run';
+type SavedRun = RunTiming & { n?: number; inputs?: { codeMatcher: CodeMatcherVersion; pauses: Pause[] } };
+const loadRun = (): SavedRun | undefined => { try { const v = localStorage.getItem(STORE); return v ? JSON.parse(v) : undefined; } catch { return undefined; } };
+const saveRun = (r: SavedRun) => { try { localStorage.setItem(STORE, JSON.stringify(r)); } catch { /* storage unavailable: comparison lasts for this visit only */ } };
 const offset = (e: HxoEvent) => Number(e.s_offset ?? 0);
 const who = (e: HxoEvent) => (Array.isArray(e.agent) ? e.agent.join(' → ') : e.agent ?? '');
 
@@ -150,13 +156,19 @@ function describe(e: HxoEvent): string | null {
  * (the person adds the new invoice rule while it is paused). When the run ends, the Run scorecard
  * scores it from the events the run emitted, including the person's own pause.
  */
-export function AgentTeamTestRun({ onEvent, autoStart = false }: { onEvent?: OnHxoEvent; autoStart?: boolean }) {
+export function AgentTeamTestRun({ onEvent, autoStart = false, speed: initialSpeed = 'Medium', previous: givenPrevious }: { onEvent?: OnHxoEvent; autoStart?: boolean; speed?: Playback; previous?: RunTiming }) {
   const [phase, setPhase] = useState<'idle' | 'running' | 'done'>(autoStart ? 'running' : 'idle');
   const [now, setNow] = useState(0);
   const [pauses, setPauses] = useState<Pause[]>([]);
+  const [speed, setSpeed] = useState<Playback>(initialSpeed);
+  const [version, setVersion] = useState<CodeMatcherVersion>('v2.0');
+  const [previous, setPrevious] = useState<SavedRun | undefined>(() => givenPrevious ?? loadRun());
+  const runNo = (previous?.n ?? 0) + 1;
   const nowRef = useRef(0);
   nowRef.current = now;
-  const events = useMemo(() => simulateRun('Paused mid-run', { pauses, person: 'You' }), [pauses]);
+  const speedRef = useRef<number>(PLAYBACK[initialSpeed]);
+  speedRef.current = PLAYBACK[speed];
+  const events = useMemo(() => simulateRun('Paused mid-run', { pauses, person: 'You', codeMatcher: version }), [pauses, version]);
   const lastT = events.length ? offset(events[events.length - 1]) : 0;
   const completed = events.some(e => e.event === 'run_completed');
   const visible = events.filter(e => offset(e) <= now);
@@ -167,7 +179,7 @@ export function AgentTeamTestRun({ onEvent, autoStart = false }: { onEvent?: OnH
     let last = performance.now();
     let raf = 0;
     const tick = (t: number) => {
-      const next = nowRef.current + ((t - last) / 1000) * SPEED;
+      const next = nowRef.current + ((t - last) / 1000) * speedRef.current;
       last = t;
       setNow(next);
       raf = requestAnimationFrame(tick);
@@ -183,40 +195,51 @@ export function AgentTeamTestRun({ onEvent, autoStart = false }: { onEvent?: OnH
       ? [...ps, { agent: 'Code matcher', from: t, to: Infinity, by: 'You' }]
       : ps.map(p => (p.agent === 'Code matcher' && !isFinite(p.to) ? { ...p, to: Math.max(t, p.from + 1) } : p))));
   };
-  const restart = () => { setPauses([]); setNow(0); setPhase('running'); };
-  const status = (agent: string) => {
-    if (agent === 'Code matcher' && paused && now >= paused.from) return { tone: 'Warning' as const, label: 'Paused' };
-    const busy = events.find(e => e.event === 'agent_step' && who(e) === agent && Number(e.start_s) <= now && offset(e) > now);
-    if (busy) return { tone: 'Agent' as const, label: `Claim ${busy.claim}` };
-    const done = visible.filter(e => e.event === 'agent_step' && who(e) === agent).length;
-    return { tone: 'Neutral' as const, label: done ? `Idle · ${done} done` : 'Waiting' };
-  };
+  /** Keep this run as the one to compare with, then wait so the person can pick the agent and speed for the next run. */
+  const runAgain = () => { if (finished) setPrevious(finished); setPauses([]); setNow(0); setPhase('idle'); };
   const resolved = visible.filter(e => e.event === 'claim_resolved').length;
   const flagged = visible.find(e => e.event === 'audit_flagged' && e.action === 'flagged');
   const feed = visible.map(e => ({ e, text: describe(e) })).filter(x => x.text).slice(-8).reverse();
   const score = useMemo(() => (phase === 'done' ? scoreRun(events) : null), [phase, events]);
+  const timing = timeRun(events, phase === 'done' ? Infinity : now, `Run ${runNo}`);
+  const finished = useMemo<SavedRun | undefined>(() => (score ? { ...timeRun(events, Infinity, `Run ${runNo}`), internal: score.internal, hxo: score.hxo, savedAt: new Date().toISOString(), n: runNo, inputs: { codeMatcher: version, pauses } } : undefined), [score, events, runNo, version, pauses]);
+  // Compare like with like: replay the earlier run (same claims, same draws) to this run's clock.
+  const previousEvents = useMemo(() => (previous?.inputs ? simulateRun('Paused mid-run', { pauses: previous.inputs.pauses, person: 'You', codeMatcher: previous.inputs.codeMatcher }) : null), [previous]);
+  const previousNow = previous && previousEvents
+    ? { ...timeRun(previousEvents, phase === 'done' ? Infinity : now, previous.label), durationSecs: previous.durationSecs, internal: previous.internal, hxo: previous.hxo }
+    : previous;
+  useEffect(() => { if (finished) saveRun(finished); }, [finished]);
+  const seg = <T extends string>(label: string, opts: readonly T[], value: T, set: (v: T) => void, disabled = false, note?: (v: T) => string) => (
+    <div className="hxo-row"><span className="hxo-label">{label}</span>
+      <div className="hxo-seg" role="group" aria-label={label}>
+        {opts.map(o => <button key={o} type="button" aria-pressed={value === o} disabled={disabled} onClick={() => set(o)}>{o}{note ? ` ${note(o)}` : ''}</button>)}
+      </div>
+    </div>
+  );
 
   return (
     <div className="hxo" style={{ display: 'flex', flexDirection: 'column', gap: 24, width: 1200, maxWidth: '100%' }}>
       <header className="hxo-row hxo-row--between">
         <div className="hxo-stack">
           <h1 className="hxo-h2">Agent team test run</h1>
-          <p className="hxo-small">Claims Coder · 7 agents · 24 synthetic claims · a new invoice format arrives at claim 9 · plays at 120× · simulated</p>
+          <p className="hxo-small">Claims Coder · 7 agents · 24 synthetic claims · a new invoice format arrives at claim 9 · same claims every run, so runs compare fairly · simulated</p>
         </div>
         <div className="hxo-actions">
           <StatusPill tone={phase === 'done' ? 'Success' : phase === 'running' ? 'Agent' : 'Neutral'} label={phase === 'done' ? `Done · ${clock(lastT)}` : phase === 'running' ? `Running · ${clock(now)}` : 'Ready'} />
-          {phase === 'idle' && <Button variant="Primary" onClick={() => setPhase('running')}>Start test run</Button>}
+          {phase === 'idle' && <Button variant="Primary" onClick={() => setPhase('running')}>{previous ? `Start run ${runNo}` : 'Start test run'}</Button>}
           {phase === 'running' && !paused && <Button variant="Secondary" onClick={() => setNow(lastT)}>Skip to the end</Button>}
-          {phase === 'done' && <Button variant="Secondary" onClick={restart}>Run again</Button>}
+          {phase === 'done' && <Button variant="Secondary" onClick={runAgain}>Set up the next run to compare</Button>}
         </div>
       </header>
+      <div className="hxo-row" style={{ gap: 24 }}>
+        {seg('Playback', ['Slow', 'Medium', 'Fast'] as const, speed, setSpeed, false, v => `${PLAYBACK[v]}×`)}
+        {seg('Code matcher', ['v2.0', 'v2.1'] as const, version, setVersion, phase === 'running', v => (v === 'v2.0' ? '(current)' : '(candidate)'))}
+      </div>
+      <TaskTimers current={timing} previous={previousNow} live={phase !== 'done'} pausedAgent={paused && now >= paused.from ? 'Code matcher' : undefined} />
       {phase !== 'done' || !score ? (
         <div className="hxo-live">
           <section className="hxo-stack" style={{ gap: 12 }} aria-label="Agent team">
-            <p className="hxo-eyebrow">The team</p>
-            <ul className="hxo-live__team">
-              {TEAM.map(a => { const st = status(a.name); return <li key={a.name}><span className="hxo-label">{a.name}</span><StatusPill tone={st.tone} label={st.label} /></li>; })}
-            </ul>
+            <p className="hxo-eyebrow">Human in the loop</p>
             <PauseOneAgent agent="Code matcher" pausedBy="You" state={paused ? 'Paused' : pauses.length ? 'Resumed' : 'Running'} at={paused ? clock(paused.from) : pauses.length ? clock(pauses[pauses.length - 1].to) : undefined} runningLabel={phase === 'running' ? 'Running · new invoice format ahead' : 'Ready'} onToggle={togglePause} onEvent={onEvent} />
             {paused && <p className="hxo-small">While it is paused, you add the new invoice rule. Resume it to let the run finish.</p>}
           </section>
@@ -233,7 +256,7 @@ export function AgentTeamTestRun({ onEvent, autoStart = false }: { onEvent?: OnH
           </section>
         </div>
       ) : (
-        <RunScorecard view="Report" score={score} summary={`Live test run · 24 synthetic claims · ${pauses.length ? `you paused the Code matcher ${clock(pauses[0].from)}–${clock(pauses[0].to)}` : 'no one paused the Code matcher'}`} reviewer="You" onRerun={restart} onEvent={onEvent} />
+        <RunScorecard view="Report" score={score} summary={`Run ${runNo} · Code matcher ${version} · 24 synthetic claims · ${pauses.length ? `you paused the Code matcher ${clock(pauses[0].from)}–${clock(pauses[0].to)}` : 'no one paused the Code matcher'}`} reviewer="You" onRerun={runAgain} onEvent={onEvent} />
       )}
     </div>
   );

@@ -101,6 +101,10 @@ const ARRIVAL_GAP = 90;
 const CLAIM_TARGET = 15 * 60;
 const EMERGENCY_TARGET = 120;
 
+export type CodeMatcherVersion = 'v2.0' | 'v2.1';
+/** v2.1: slower per step, but trained on the new invoice format. */
+const CODE_MATCHER_V21 = { secs: 34, held: 0.05, wrong: 0.015, newFormatWrong: 0.06 };
+
 export interface SimOptions {
   /** Overrides the scenario's pauses (used by the live pattern, where a real person pauses). */
   pauses?: Pause[];
@@ -108,6 +112,8 @@ export interface SimOptions {
   world?: RunScenario;
   /** Name of the person in the loop (default K. Patel). */
   person?: string;
+  /** Which Code matcher does the coding task. v2.1 is the candidate that knows the new invoice format. */
+  codeMatcher?: CodeMatcherVersion;
 }
 
 type Ev = HxoEvent & { s: number };
@@ -117,7 +123,10 @@ type Ev = HxoEvent & { s: number };
  * so a pause added later in the run never changes what happened before it.
  */
 export function simulateRun(scenario: RunScenario, opts: SimOptions = {}): HxoEvent[] {
-  const spec = SCENARIOS[opts.world ?? scenario];
+  const base = SCENARIOS[opts.world ?? scenario];
+  const v21 = opts.codeMatcher === 'v2.1';
+  const spec = v21 ? { ...base, newFormatWrong: CODE_MATCHER_V21.newFormatWrong } : base;
+  const team = TEAM.map(a => (v21 && a.name === 'Code matcher' ? { ...a, secs: CODE_MATCHER_V21.secs, held: CODE_MATCHER_V21.held, wrong: CODE_MATCHER_V21.wrong } : a));
   const pauses = opts.pauses ?? SCENARIOS[scenario].pauses;
   const PERSON = opts.person ?? DEFAULT_PERSON;
   const r = rng(spec.seed);
@@ -140,7 +149,7 @@ export function simulateRun(scenario: RunScenario, opts: SimOptions = {}): HxoEv
   const push = (s: number, event: HxoEventName, component: string, actor: Actor, action: string, agent: string | string[] | undefined, extra: Record<string, unknown> = {}) =>
     ev.push({ s, event, t: iso(s), component, actor, action, ...(agent !== undefined ? { agent } : {}), ...extra } as Ev);
 
-  push(0, 'run_started', 'Govern/Run scorecard', 'person', 'started', 'all', { scenario, claims: n, team: TEAM.map(a => a.name) });
+  push(0, 'run_started', 'Govern/Run scorecard', 'person', 'started', 'all', { scenario, claims: n, team: team.map(a => a.name), versions: { 'Code matcher': opts.codeMatcher ?? 'v2.0' } });
 
   // When a person pauses an agent: the agent finishes its current step, then idles.
   const pausedAt = (agent: string, t: number) => pauses.find(p => p.agent === agent && t >= p.from && t < p.to);
@@ -150,7 +159,7 @@ export function simulateRun(scenario: RunScenario, opts: SimOptions = {}): HxoEv
   let codeMistakesSeen = 0;
   let auditorFlagged = false;
 
-  TEAM.forEach((agent, k) => {
+  team.forEach((agent, k) => {
     let free = 0;
     const ackDone = new Set<Pause>();
     const pending = claims.filter(c => c.stage === k - 1);
@@ -439,3 +448,59 @@ export function scoreRun(events: HxoEvent[], team: AgentProfile[] = TEAM): RunSc
 
 /** Convenience: simulate a scenario and score it. */
 export function scoreScenario(s: RunScenario): RunScore { return scoreRun(simulateRun(s)); }
+
+/* ---------------------------------------------------------------- task timers */
+
+export interface TaskTime {
+  agent: string;
+  role: string;
+  /** Steps finished by `now`. */
+  steps: number;
+  /** Seconds the agent spent working, by `now`. */
+  busySecs: number;
+  /** Average seconds per finished step. */
+  avgSecs: number | null;
+  /** Seconds a person spent on this task (answering hand-backs, fixing mistakes), by `now`. */
+  personSecs: number;
+  working: boolean;
+}
+export interface RunTiming {
+  label: string;
+  codeMatcher: string;
+  /** Simulated seconds from start to the last event shown. */
+  durationSecs: number;
+  resolved: number;
+  claims: number;
+  tasks: TaskTime[];
+  internal?: number;
+  hxo?: number;
+  savedAt?: string;
+}
+
+/** Per-task timers from a run's events, as of `now` simulated seconds (default: the whole run). Times are simulated, so playback speed never changes them. */
+export function timeRun(events: HxoEvent[], now = Infinity, label = 'This run', team: AgentProfile[] = TEAM): RunTiming {
+  const off = (e: HxoEvent) => Number(e.s_offset ?? 0);
+  const start = events.find(e => e.event === 'run_started');
+  const steps = events.filter(e => e.event === 'agent_step');
+  const tasks = team.map(a => {
+    const mine = steps.filter(e => agentOf(e) === a.name && Number(e.start_s) <= now);
+    const done = mine.filter(e => off(e) <= now);
+    const busy = mine.reduce((s, e) => s + Math.min(off(e), now) - Number(e.start_s), 0);
+    const doneBusy = done.reduce((s, e) => s + Number(e.dur_s), 0);
+    const person = events.filter(e => agentOf(e) === a.name && off(e) <= now && (e.event === 'handback_resolved' || e.event === 'correction_made'))
+      .reduce((s, e) => s + Number(e.wait_secs ?? e.fix_secs ?? 0), 0);
+    return { agent: a.name, role: a.role, steps: done.length, busySecs: Math.round(busy), avgSecs: done.length ? Math.round((doneBusy / done.length) * 10) / 10 : null, personSecs: Math.round(person), working: mine.length > done.length };
+  });
+  const last = Math.max(0, ...events.filter(e => off(e) <= now).map(off));
+  return {
+    label,
+    codeMatcher: String((start?.versions as Record<string, string> | undefined)?.['Code matcher'] ?? 'v2.0'),
+    durationSecs: isFinite(now) ? Math.round(now) : last,
+    resolved: events.filter(e => e.event === 'claim_resolved' && off(e) <= now).length,
+    claims: start ? Number(start.claims) : 0,
+    tasks,
+  };
+}
+
+/** mm:ss for a number of seconds. */
+export const mmss = (secs: number) => `${Math.floor(secs / 60)}:${String(Math.round(secs % 60)).padStart(2, '0')}`;

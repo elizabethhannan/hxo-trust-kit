@@ -16,7 +16,7 @@ Stories are grouped the same way as the Figma pages.
 | 2 · Preview before acting | Preview-then-apply, Approval card, Correction with reason |
 | 3 · Humans hold the switch | Undo bar, Stop control, Pause one agent, Switch decision |
 | 4 · Hand back with context | Hand-back card, Escalation banner, Agent disagreement banner |
-| 5–7 · Learn and govern | Human Frustration Matrix, Agent Auditor, Evaluation Matrix, Run scorecard |
+| 5–7 · Learn and govern | Human Frustration Matrix, Agent Auditor, Evaluation Matrix, Run scorecard, Task timers |
 | Supporting parts | Button, Actor badge, Status pill |
 | Patterns | Claims Coder review, Team-chat hand-back, Agent team test run |
 
@@ -37,6 +37,8 @@ After a test run of an agent team, the **Run scorecard** is the human-in-the-loo
 - **External, the HXO experience for the person waiting on a result:** got the right result, how fast, avoidable work for the person, whether pauses were honored, and whether hand-backs carried full context.
 
 It then says whether the run was successful, what was hard, what held up, and asks a person to sign off or block the release. `src/run.ts` holds the seeded test harness (Claims Coder team, 24 synthetic claims) and `scoreRun()`, which works on any product that emits these events. All runs shown are simulated.
+
+**Task timers** put a timer on each agent's task and compare it with the previous run on the same claims, for example Code matcher v2.0 against the v2.1 candidate. The test run plays at Slow, Medium or Fast; timers count simulated time, so the speed you watch at never changes the comparison.
 
 ## Run it
 

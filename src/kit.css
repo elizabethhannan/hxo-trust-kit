@@ -278,3 +278,8 @@
 .hxo-live__team li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); background: var(--surface); border: var(--stroke-default) solid var(--line); }
 .hxo-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-xs); font: 400 13px/18px var(--font-body); color: var(--ink-2); }
 .hxo-feed time { font: 400 12px/18px var(--font-data); color: var(--ink-3); margin-right: var(--space-sm); }
+
+/* Govern/Task timers */
+.hxo-timers { width: 1200px; max-width: 100%; }
+.hxo-timers td, .hxo-timers th { vertical-align: middle; }
+.hxo-compare { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }

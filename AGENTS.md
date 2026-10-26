@@ -259,10 +259,21 @@ Internal score (how the agents worked together, weights): steps right the first 
 HXO experience score (what the person waiting on a result lived through): got the right result 30, resolved within 15 minutes 15, no avoidable work for the person 20, pauses honored 15, hand-backs with full context 20. A measure with no data is shown as Not tested and its weight is shared out.
 Verdict: Not successful if any claim would go out wrong, any is still open, HXO < 70 or right results < 90%. Successful if internal ≥ 85, HXO ≥ 85 and avoidable person work (fixes, repeat questions, pauses) ≤ 10% of claims. Otherwise Successful with interventions. Agents are ranked by steps right the first time.
 
+### TaskTimers
+
+One timer per task (each agent's job) for a test run, compared with an earlier run.
+
+- `current: RunTiming` (from `timeRun(events, now?, label?)`)
+- `previous?: RunTiming` (an earlier run; while live, pass it as it stood at the same clock time)
+- `live?: boolean`, `pausedAgent?: string`
+
+Columns: status, timer (agent busy time), steps, agent time per step (now, before, Faster / Same pace / Slower at ±5%), person time on the task (now, before, Less / More). Times are simulated seconds, so playback speed never changes them.
+
 ## run.ts
 
-- `simulateRun(scenario, { pauses?, world?, person? })`: seeded test of the Claims Coder agent team (7 agents, 24 synthetic claims). Every random draw happens up front, so a pause added later never changes what happened before it.
+- `simulateRun(scenario, { pauses?, world?, person?, codeMatcher? })`; `codeMatcher: 'v2.1'` swaps in the candidate (34 s per step, trained on the new invoice format): seeded test of the Claims Coder agent team (7 agents, 24 synthetic claims). Every random draw happens up front, so a pause added later never changes what happened before it.
 - `scoreRun(events)`: the scoring above, from events alone. Works on any product that emits these events.
+- `timeRun(events, now?, label?)`: per-task timers as of a clock time. `mmss(seconds)`.
 - `TEAM`, `STRANDS`, `HANDBACK_PARTS`, `clock(seconds)`.
 
 ## Telemetry
@@ -275,4 +286,4 @@ Run events (added for the Run scorecard): `run_started`, `agent_step` (action `o
 
 ## Patterns
 
-`src/patterns.tsx`: `ClaimsCoderReview` and `TeamChatHandBack`, composed only from kit components. They mirror the Figma Patterns page. `AgentTeamTestRun` plays a test run at 120×; its Pause control is live, and the run ends in the Run scorecard (Report view) scored from the events it emitted. It has no Figma frame yet.
+`src/patterns.tsx`: `ClaimsCoderReview` and `TeamChatHandBack`, composed only from kit components. They mirror the Figma Patterns page. `AgentTeamTestRun` plays a test run with a Playback setting (Slow 60×, Medium 120×, Fast 300×) and a Code matcher choice (v2.0 current, v2.1 candidate). Task timers run live and compare with the previous finished run at the same clock time; the last finished run is kept in this browser (localStorage, key `hxo-trust-kit:last-run`). Its Pause control is live, and the run ends in the Run scorecard (Report view) scored from the events it emitted. It has no Figma frame yet.

@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { cx } from '../hooks';
-import { clock, scoreRun, scoreScenario, scenarioSummary, type Measure, type RunScenario, type RunScore, type Verdict } from '../run';
+import { clock, mmss, scoreRun, scoreScenario, scenarioSummary, type Measure, type RunScenario, type RunScore, type RunTiming, type Verdict } from '../run';
 import { emit, type HxoEvent, type OnHxoEvent } from '../telemetry';
 import { ActorBadge, Button, StatusPill, type Tone } from './supporting';
 
@@ -275,6 +275,78 @@ export function RunScorecard({
         )}
       </div>
       <p className="hxo-small hxo-muted">Scored only from the run’s telemetry events. Internal is how the agents worked together; HXO experience is what the person waiting on a result lived through. A person signs off every run; the scorecard never ships a team by itself.</p>
+    </section>
+  );
+}
+
+/* ---------- Govern/Task timers ---------- */
+
+export interface TaskTimersProps {
+  current: RunTiming;
+  /** An earlier run to compare with, e.g. the same claims done by another agent version. While a run is live, pass the earlier run as it stood at the same clock time. */
+  previous?: RunTiming;
+  live?: boolean;
+  /** Agent a person has paused right now. */
+  pausedAgent?: string;
+}
+
+function pace(cur: number | null, prev: number | null, words: [string, string] = ['Faster', 'Slower']): { tone: Tone; label: string } | null {
+  if (cur === null || prev === null || prev === 0) return null;
+  const d = Math.round(((cur - prev) / prev) * 100);
+  if (d <= -5) return { tone: 'Success', label: `${words[0]} · ${Math.abs(d)}%` };
+  if (d >= 5) return { tone: 'Warning', label: `${words[1]} · ${d}%` };
+  return { tone: 'Neutral', label: 'Same pace' };
+}
+
+function Compare({ now, before, pace: p }: { now: string; before?: string; pace: { tone: Tone; label: string } | null }) {
+  return (
+    <span className="hxo-compare">
+      <span className="hxo-data-m">{now}</span>
+      {before !== undefined && <span className="hxo-small hxo-muted">before {before}</span>}
+      {p && <StatusPill tone={p.tone} label={p.label} />}
+    </span>
+  );
+}
+
+/** One timer per task (each agent's job), compared with a finished earlier run. Times are simulated seconds, so playback speed does not change them. */
+export function TaskTimers({ current, previous, live, pausedAgent }: TaskTimersProps) {
+  const runPace = previous && !live ? pace(current.durationSecs, previous.durationSecs) : null;
+  return (
+    <section className="hxo hxo-card hxo-timers" aria-label="Task timers">
+      <div className="hxo-row hxo-row--between" style={{ alignItems: 'flex-start' }}>
+        <div className="hxo-stack">
+          <p className="hxo-eyebrow">Task timers</p>
+          <h3 className="hxo-h3">{current.label} · Code matcher {current.codeMatcher}</h3>
+          <p className="hxo-small">
+            Run time <span className="hxo-data-m" role="timer" aria-live="off">{mmss(current.durationSecs)}</span> · {current.resolved} of {current.claims} claims resolved
+            {previous ? <> · compared with {previous.label} (Code matcher {previous.codeMatcher}, finished in {mmss(previous.durationSecs)}){live ? ', at the same point in its run' : ''}</> : ' · no earlier run to compare yet'}
+          </p>
+        </div>
+        {runPace && <StatusPill tone={runPace.tone} label={`Whole run: ${runPace.label}`} />}
+      </div>
+      <table className="hxo-table hxo-ranktable">
+        <thead>
+          <tr><th scope="col">Task</th><th scope="col">Status</th><th scope="col">Timer</th><th scope="col">Steps</th><th scope="col">Agent time per step</th><th scope="col">Person time on this task</th></tr>
+        </thead>
+        <tbody>
+          {current.tasks.map(t => {
+            const prev = previous?.tasks.find(p => p.agent === t.agent);
+            const p = pace(t.avgSecs, prev?.avgSecs ?? null);
+            const isPaused = pausedAgent === t.agent;
+            return (
+              <tr key={t.agent}>
+                <th scope="row"><span className="hxo-stack"><ActorBadge actor="Agent" name={t.agent === 'Code matcher' ? `Code matcher ${current.codeMatcher}` : t.agent} /><span className="hxo-small">{t.role}</span></span></th>
+                <td>{isPaused ? <StatusPill tone="Warning" label="Paused" /> : t.working ? <StatusPill tone="Agent" label="Working" /> : t.steps === current.claims ? <StatusPill tone="Success" label="Done" /> : <StatusPill tone="Neutral" label={t.steps ? 'Waiting' : 'Not started'} />}</td>
+                <td className="hxo-data-m">{mmss(t.busySecs)}</td>
+                <td className="hxo-data-m">{t.steps}</td>
+                <td><Compare now={t.avgSecs === null ? '—' : `${t.avgSecs} s`} before={prev ? (prev.avgSecs === null ? '—' : `${prev.avgSecs} s`) : undefined} pace={p} /></td>
+                <td><Compare now={t.personSecs ? mmss(t.personSecs) : '0:00'} before={prev ? mmss(prev.personSecs) : undefined} pace={pace(t.personSecs, prev?.personSecs ?? null, ['Less', 'More'])} /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="hxo-small hxo-muted">Timers count simulated agent time, so Slow, Medium and Fast playback never change the result. Agent time per step is the fair speed comparison across runs; ±5% counts as the same pace. Person time is what a person spent answering hand-backs and fixing mistakes for that task, so less is better.{previous && (previous.internal !== undefined) ? ` Earlier run scored internal ${previous.internal}, HXO ${previous.hxo}.` : ''}</p>
     </section>
   );
 }
