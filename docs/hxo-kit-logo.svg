@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 64" role="img" aria-label="HXO Trust and Control Kit">
+  <rect width="440" height="64" rx="16" fill="#0A1A5C"/>
+  <g transform="translate(6 6) scale(.8125)">
+    <path d="M19 19 9.5 32 19 45" fill="none" stroke="#3EE8C4" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M45 19 54.5 32 45 45" fill="none" stroke="#3EE8C4" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="28" cy="32" r="7.5" fill="#3EE8C4" fill-opacity=".18" stroke="#3EE8C4" stroke-width="2.4"/>
+    <circle cx="36" cy="32" r="7.5" fill="#B8A6FF" fill-opacity=".18" stroke="#B8A6FF" stroke-width="2.4"/>
+    <circle cx="32" cy="32" r="2.4" fill="#E6FFF8"/>
+  </g>
+  <text x="68" y="41" font-family="Familjen Grotesk, Helvetica Neue, Arial, sans-serif" font-size="26" font-weight="700"><tspan fill="#3EE8C4">HXO</tspan><tspan fill="#E6FFF8" font-weight="500"> Trust and Control Kit</tspan></text>
+</svg>
