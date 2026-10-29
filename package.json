@@ -2,7 +2,7 @@
   "name": "hxo-trust-kit",
   "version": "1.1.0",
   "private": true,
-  "description": "HXO Trust and Control Kit: React components that mirror the Figma library for human-agent trust and control patterns.",
+  "description": "HXO Agent Trust and Audit Kit: React components that mirror the Figma library for human-agent trust and control patterns.",
   "type": "module",
   "scripts": {
     "storybook": "storybook dev -p 6006",

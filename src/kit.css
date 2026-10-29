@@ -1,4 +1,4 @@
-/* HXO Trust and Control Kit: component styles. Uses only tokens from tokens/tokens.css. */
+/* HXO Agent Trust and Audit Kit: component styles. Uses only tokens from tokens/tokens.css. */
 .hxo { font-family: var(--font-body); color: var(--ink); box-sizing: border-box; }
 .hxo *, .hxo *::before, .hxo *::after { box-sizing: border-box; }
 .hxo :focus-visible { outline: none; box-shadow: var(--focus-ring); }

@@ -1,6 +1,6 @@
-# HXO Trust and Control Kit · React + Storybook
+# HXO Agent Trust and Audit Kit · React + Storybook
 
-The code mirror of the Figma library **HXO Trust and Control Kit**: 20 components for products where AI agents do work on behalf of people. Every Figma component, variant and default string has a matching React component, prop and story, and the colors, spacing, type, motion and effects come from the same Figma variables.
+The code mirror of the Figma library **HXO Agent Trust and Audit Kit**: 20 components for products where AI agents do work on behalf of people. Every Figma component, variant and default string has a matching React component, prop and story, and the colors, spacing, type, motion and effects come from the same Figma variables.
 
 Figma library: https://www.figma.com/design/Cb0QDEILY9cggEp101ZTg0/HXO-Trust-and-Control-Kit
 
